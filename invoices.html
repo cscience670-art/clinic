@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Invoices Management</title>
+
+<style>
+
+/* ======================= GLOBAL ======================= */
+body {
+    margin: 0;
+    font-family: Arial;
+    background: #f4f6f9;
+}
+
+/* ======================= SIDEBAR ======================= */
+.sidebar {
+    position: fixed;
+    width: 230px;
+    height: 100vh;
+
+    background: #2c3e50;
+    padding: 20px;
+}
+
+.sidebar h2 {
+    color: white;
+    text-align: center;
+}
+
+.sidebar a {
+    display: block;
+    color: #ddd;
+    padding: 12px;
+    margin: 8px 0;
+    text-decoration: none;
+    border-radius: 6px;
+    transition: 0.3s;
+}
+
+.sidebar a:hover {
+    background: #34495e;
+    transform: translateX(6px);
+}
+
+/* ======================= MAIN ======================= */
+.main {
+    margin-left: 250px;
+    padding: 20px;
+}
+
+/* ======================= CARDS ======================= */
+.card {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.08);
+    margin-bottom: 20px;
+    transition: 0.3s;
+}
+
+.card:hover {
+    transform: scale(1.01);
+}
+
+/* ======================= GRID ======================= */
+.container {
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    gap: 20px;
+}
+
+/* ======================= FORM ======================= */
+input, select {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+/* ======================= BUTTON ======================= */
+button {
+    width: 100%;
+    padding: 10px;
+    background: #27ae60;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+button:hover {
+    background: #1e8449;
+    transform: scale(1.05);
+}
+
+/* ======================= TABLE ======================= */
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th {
+    background: #27ae60;
+    color: white;
+}
+
+th, td {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+    text-align: center;
+}
+
+tr:hover {
+    background: #f1f1f1;
+}
+
+/* ======================= TOTAL ======================= */
+.total-box {
+    font-size: 22px;
+    font-weight: bold;
+    color: #27ae60;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+/* CSV buttons */
+.csv-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.csv-actions button {
+    flex: 1;
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <h2>🏥 Admin</h2>
+  <a href="index.html">📊 Dashboard</a>
+  <a href="patients.html">👥 Patients</a>
+  <a href="Admissions.html">🛏️ Admissions</a>
+  <a href="appoinintments.html">📅 Appointments</a>
+  <a href="tests.html">🧪 Lab Tests</a>
+  <a href="invoices.html">💳 Invoices</a>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+<h1>💰 Invoices Management</h1>
+
+<div class="container">
+
+<!-- FORM -->
+<div class="card">
+    <h3>➕ New Invoice</h3>
+
+    <label>Patient</label>
+    <select id="patientSelect"></select>
+
+    <label>Total Amount</label>
+    <input type="number" id="total" placeholder="Enter amount">
+
+    <button onclick="addInvoice()">💾 Save Invoice</button>
+
+    <hr>
+
+    <h3>📥 Import CSV</h3>
+    <input type="file" id="csvFile" accept=".csv">
+    <button onclick="importCSV()">⬆️ Import CSV</button>
+</div>
+
+<!-- TABLE -->
+<div class="card">
+    <h3>📋 Invoices List</h3>
+
+    <div class="total-box">
+        💰 Total Revenue: <span id="totalRevenue">0</span> DA
+    </div>
+
+    <div class="csv-actions">
+        <button onclick="exportCSV()">📤 Export CSV</button>
+        <button onclick="loadInvoices()">🔄 Refresh</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Patient</th>
+                <th>Total</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody id="invoicesTable"></tbody>
+    </table>
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+const API = "http://localhost:3000";
+let invoicesData = [];
+
+// ===================== LOAD PATIENTS =====================
+async function loadPatients() {
+    const res = await fetch(`${API}/patients`);
+    const data = await res.json();
+
+    let select = document.getElementById("patientSelect");
+    select.innerHTML = "";
+
+    data.forEach(p => {
+        select.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+    });
+}
+
+// ===================== LOAD INVOICES =====================
+async function loadInvoices() {
+    const res = await fetch(`${API}/invoices`);
+    const data = await res.json();
+
+    invoicesData = data;
+
+    let table = document.getElementById("invoicesTable");
+    table.innerHTML = "";
+
+    let total = 0;
+
+    data.forEach(i => {
+        total += Number(i.total);
+
+        table.innerHTML += `
+        <tr>
+            <td>${i.id}</td>
+            <td>${i.patient_name}</td>
+            <td>${i.total} DA</td>
+            <td>${i.date}</td>
+        </tr>`;
+    });
+
+    document.getElementById("totalRevenue").innerText = total.toFixed(2);
+}
+
+// ===================== ADD =====================
+async function addInvoice() {
+    const total = document.getElementById("total").value;
+
+    if (!total) {
+        alert("⚠️ Enter amount");
+        return;
+    }
+
+    const data = {
+        patient_id: document.getElementById("patientSelect").value,
+        total: total
+    };
+
+    await fetch(`${API}/invoices`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(data)
+    });
+
+    document.getElementById("total").value = "";
+    loadInvoices();
+}
+
+// ===================== EXPORT CSV =====================
+function exportCSV() {
+    let csv = "ID,Patient,Total,Date\n";
+
+    invoicesData.forEach(i => {
+        csv += `${i.id},${i.patient_name},${i.total},${i.date}\n`;
+    });
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const link = document.createElement("a");
+
+    link.href = URL.createObjectURL(blob);
+    link.download = "invoices.csv";
+    link.click();
+}
+
+// ===================== IMPORT CSV =====================
+function importCSV() {
+    const file = document.getElementById("csvFile").files[0];
+
+    if (!file) {
+        alert("⚠️ Select CSV file");
+        return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+        const rows = e.target.result.split("\n").slice(1);
+
+        rows.forEach(async row => {
+            const cols = row.split(",");
+
+            if (cols.length < 3) return;
+
+            const data = {
+                patient_id: cols[0], // يجب يكون ID
+                total: cols[2]
+            };
+
+            await fetch(`${API}/invoices`, {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify(data)
+            });
+        });
+
+        alert("✅ CSV Imported");
+        loadInvoices();
+    };
+
+    reader.readAsText(file);
+}
+
+// ===================== INIT =====================
+function init() {
+    loadPatients();
+    loadInvoices();
+}
+
+init();
+
+</script>
+
+</body>
+</html>

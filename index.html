@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Admin Dashboard</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial;
+}
+
+/* SIDEBAR */
+.sidebar {
+  position: fixed;
+  width: 230px;
+  height: 100vh;
+  background: #2c3e50;
+  color: white;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.sidebar h2 {
+  text-align: center;
+}
+
+.sidebar a {
+  display: block;
+  padding: 12px;
+  color: #ddd;
+  text-decoration: none;
+  margin: 6px 0;
+  border-radius: 6px;
+  transition: 0.3s;
+}
+
+.sidebar a:hover {
+  background: #34495e;
+  transform: translateX(6px);
+}
+
+/* MAIN */
+.main {
+  margin-left: 250px;
+  background: #ecf0f1;
+  padding: 20px;
+  min-height: 100vh;
+}
+
+/* DASHBOARD */
+.dashboard {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+}
+
+.card {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  transition: 0.3s;
+}
+
+.card:hover {
+  transform: scale(1.03);
+}
+
+/* SECTION */
+.section {
+  margin-top: 30px;
+}
+
+/* FORM */
+input {
+  width: 100%;
+  padding: 10px;
+  margin: 5px 0;
+  border-radius: 5px;
+  border: 1px solid #ddd;
+}
+
+/* BUTTON */
+button {
+  padding: 10px;
+  background: #3498db;
+  color: white;
+  border: none;
+  cursor: pointer;
+  margin-top: 5px;
+  border-radius: 5px;
+  transition: 0.3s;
+}
+
+button:hover {
+  background: #2980b9;
+  transform: scale(1.05);
+}
+
+/* TABLE */
+table {
+  width: 100%;
+  margin-top: 15px;
+  border-collapse: collapse;
+}
+
+th {
+  background: #3498db;
+  color: white;
+}
+
+th, td {
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+  text-align: center;
+}
+
+tr:hover {
+  background: #f2f2f2;
+}
+
+/* CSV */
+.csv-box {
+  margin-top: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <h2>🏥 Admin</h2>
+  <a href="index.html">📊 Dashboard</a>
+  <a href="patients.html">👥 Patients</a>
+  <a href="Admissions.html">🛏️ Admissions</a>
+  <a href="appoinintments.html">📅 Appointments</a>
+  <a href="tests.html">🧪 Lab Tests</a>
+  <a href="invoices.html">💳 Invoices</a>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+<h1>📊 Dashboard</h1>
+
+<div class="dashboard">
+  <div class="card"><h3>👥 Patients</h3><p id="patients">0</p></div>
+  <div class="card"><h3>👨‍⚕️ Doctors</h3><p id="doctors">0</p></div>
+  <div class="card"><h3>📅 Appointments</h3><p id="appointments">0</p></div>
+  <div class="card"><h3>💰 Invoices</h3><p id="invoices">0</p></div>
+  <div class="card"><h3>🛏️ Rooms Used</h3><p id="roomsUsed">0</p></div>
+  <div class="card"><h3>🛌 Rooms Free</h3><p id="roomsFree">0</p></div>
+</div>
+
+<!-- DOCTORS -->
+<div class="section">
+<h2>👨‍⚕️ Manage Doctors</h2>
+
+<input type="text" id="doctorName" placeholder="Doctor Name">
+<input type="text" id="specialization" placeholder="Specialization">
+
+<button onclick="addDoctor()">➕ Add Doctor</button>
+
+<div class="csv-box">
+  <input type="file" id="csvFile">
+  <button onclick="importCSV()">📥 Import CSV</button>
+  <button onclick="exportCSV()">📤 Export CSV</button>
+</div>
+
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Name</th>
+<th>Specialization</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody id="doctorsTable"></tbody>
+</table>
+
+</div>
+
+</div>
+
+<script>
+
+const API = "http://localhost:3000";
+let doctorsData = [];
+
+// ===================== DASHBOARD =====================
+async function loadDashboard() {
+  const res = await fetch(`${API}/dashboard`);
+  const data = await res.json();
+
+  document.getElementById("patients").innerText = data.patients;
+  document.getElementById("doctors").innerText = data.doctors;
+  document.getElementById("appointments").innerText = data.appointments;
+  document.getElementById("invoices").innerText = data.invoices;
+  document.getElementById("roomsUsed").innerText = data.roomsUsed;
+  document.getElementById("roomsFree").innerText = data.roomsFree;
+}
+
+// ===================== LOAD DOCTORS =====================
+async function loadDoctors() {
+  const res = await fetch(`${API}/doctors`);
+  const data = await res.json();
+
+  doctorsData = data;
+
+  let table = document.getElementById("doctorsTable");
+  table.innerHTML = "";
+
+  data.forEach(d => {
+    table.innerHTML += `
+      <tr>
+        <td>${d.id}</td>
+        <td>${d.name}</td>
+        <td>${d.specialty}</td>
+        <td>
+          <button onclick="deleteDoctor(${d.id})">delet </button>
+        </td>
+      </tr>
+    `;
+  });
+}
+
+// ===================== ADD =====================
+async function addDoctor() {
+  const data = {
+    name: document.getElementById("doctorName").value,
+    specialization: document.getElementById("specialization").value
+  };
+
+  await fetch(`${API}/doctors`, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(data)
+  });
+
+  loadDoctors();
+  loadDashboard();
+}
+
+// ===================== DELETE =====================
+async function deleteDoctor(id) {
+  await fetch(`${API}/doctors/${id}`, { method: "DELETE" });
+  loadDoctors();
+  loadDashboard();
+}
+
+// ===================== EXPORT CSV =====================
+function exportCSV() {
+  let csv = "id,name,specialty\n";
+
+  doctorsData.forEach(d => {
+    csv += `${d.id},${d.name},${d.specialty}\n`;
+  });
+
+  const blob = new Blob([csv], { type: "text/csv" });
+  const link = document.createElement("a");
+
+  link.href = URL.createObjectURL(blob);
+  link.download = "doctors.csv";
+  link.click();
+}
+
+// ===================== IMPORT CSV =====================
+function importCSV() {
+  const file = document.getElementById("csvFile").files[0];
+  if (!file) return alert("Select file");
+
+  const reader = new FileReader();
+
+  reader.onload = async function(e) {
+    const rows = e.target.result.split("\n").slice(1);
+
+    for (let row of rows) {
+      const cols = row.split(",");
+      if (cols.length < 2) continue;
+
+      await fetch(`${API}/doctors`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          name: cols[1],
+          specialization: cols[2] || ""
+        })
+      });
+    }
+
+    alert("✅ Imported");
+    loadDoctors();
+  };
+
+  reader.readAsText(file);
+}
+
+// ===================== INIT =====================
+function init() {
+  loadDashboard();
+  loadDoctors();
+}
+
+init();
+
+</script>
+
+</body>
+</html>

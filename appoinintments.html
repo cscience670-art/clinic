@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Appointments Management</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial;
+  display: flex;
+}
+/* SIDEBAR */
+.sidebar {
+  position: fixed; /* 🔥 مهم */
+  top: 0;
+  left: 0;
+  width: 230px;
+  height: 100vh; /* 🔥 يغطي كامل الشاشة */
+  background: #2c3e50;
+  color: white;
+  padding: 20px;
+  overflow-y: auto; /* 🔥 لو القائمة طويلة */
+}
+
+/* تحسين الشكل */
+.sidebar a {
+  display: block;
+  padding: 12px;
+  color: #ddd;
+  text-decoration: none;
+  margin: 6px 0;
+  border-radius: 6px;
+  transition: 0.3s;
+}
+
+.sidebar a:hover {
+  background: #34495e;
+  transform: translateX(6px);
+}
+
+/* MAIN */
+.main {
+  margin-left: 250px; /* 🔥 باش ما يغطيش عليه sidebar */
+  min-height: 100vh; /* 🔥 يكمل الصفحة */
+  background: #ecf0f1;
+  padding: 20px;
+}
+/* MAIN */
+
+/* HEADER */
+.header-title {
+  margin-bottom: 20px;
+}
+
+/* GRID */
+.container {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 20px;
+}
+
+/* CARD */
+.card {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+/* INPUT */
+input, select {
+  width: 100%;
+  padding: 10px;
+  margin: 5px 0 15px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+/* BUTTON */
+button {
+  width: 100%;
+  padding: 10px;
+  background: #3498db;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #2980b9;
+}
+
+/* TABLE */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 12px;
+  border-bottom: 1px solid #ddd;
+  text-align: center;
+}
+
+/* 🔥 Hover preserved */
+tr:hover {
+  background: #f2f2f2;
+  transition: 0.3s;
+}
+
+/* STATUS */
+.status {
+  padding: 5px 10px;
+  border-radius: 5px;
+  color: white;
+}
+
+.confirmed { background: green; }
+.pending { background: orange; }
+.canceled { background: red; }
+
+/* SEARCH */
+.search {
+  margin-bottom: 10px;
+}
+
+/* CSV BUTTONS */
+.csv-buttons button {
+  margin-top: 5px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <h2>🏥 Admin</h2>
+  <a href="index.html">📊 Dashboard</a>
+  <a href="patients.html">👥 Patients</a>
+  <a href="Admissions.html">🛏️ Admissions</a>
+  <a href="appoinintments.html">📅 Appointments</a>
+  <a href="tests.html">🧪 Lab Tests</a>
+  <a href="invoices.html">💳 Invoices</a>
+</div>
+<!-- MAIN -->
+<div class="main">
+
+<h1 class="header-title">📅 Appointments Management</h1>
+
+<div class="container">
+
+<!-- FORM -->
+<div class="card">
+
+<h3>➕ New Appointment</h3>
+
+<select id="patientSelect"></select>
+<select id="doctorSelect"></select>
+
+<input type="date" id="date">
+<input type="time" id="time">
+
+<select id="status">
+  <option value="pending">Pending</option>
+  <option value="confirmed">Confirmed</option>
+  <option value="canceled">Canceled</option>
+</select>
+
+<button onclick="addAppointment()">Save Appointment</button>
+
+<div class="csv-buttons">
+  <input type="file" id="csvFile">
+  <button onclick="importCSV()">📥 Import CSV</button>
+  <button onclick="exportCSV()">📤 Export CSV</button>
+</div>
+
+</div>
+
+<!-- TABLE -->
+<div class="card">
+
+<h3>📋 Appointments</h3>
+
+<input class="search" type="text" id="search" placeholder="🔍 Search..." onkeyup="searchAppointments()">
+
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Patient</th>
+<th>Doctor</th>
+<th>Date</th>
+<th>Time</th>
+<th>Status</th>
+</tr>
+</thead>
+
+<tbody id="appointmentsTable"></tbody>
+</table>
+
+
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+const API = "http://localhost:3000";
+let appointmentsData = [];
+
+// =====================
+// LOAD PATIENTS + DOCTORS
+// =====================
+async function loadData() {
+  const patients = await fetch(`${API}/patients`).then(r => r.json());
+  const doctors = await fetch(`${API}/doctors`).then(r => r.json());
+
+  let pSelect = document.getElementById("patientSelect");
+  let dSelect = document.getElementById("doctorSelect");
+
+  patients.forEach(p => {
+    pSelect.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+  });
+
+  doctors.forEach(d => {
+    dSelect.innerHTML += `<option value="${d.id}">${d.name}</option>`;
+  });
+}
+
+// =====================
+// LOAD APPOINTMENTS
+// =====================
+async function loadAppointments() {
+  const res = await fetch(`${API}/appointments`);
+  const data = await res.json();
+
+  appointmentsData = data;
+  renderTable(data);
+}
+
+// =====================
+// TABLE
+// =====================
+function renderTable(data) {
+  let table = document.getElementById("appointmentsTable");
+  table.innerHTML = "";
+
+  data.forEach(a => {
+    table.innerHTML += `
+      <tr>
+        <td>${a.id}</td>
+        <td>${a.patient_name}</td>
+        <td>${a.doctor_name}</td>
+        <td>${a.date}</td>
+        <td>${a.time}</td>
+        <td><span class="status ${a.status}">${a.status}</span></td>
+      </tr>
+    `;
+  });
+}
+
+// =====================
+// SEARCH
+// =====================
+function searchAppointments() {
+  const key = document.getElementById("search").value.toLowerCase();
+
+  const filtered = appointmentsData.filter(a =>
+    a.patient_name.toLowerCase().includes(key) ||
+    a.doctor_name.toLowerCase().includes(key)
+  );
+
+  renderTable(filtered);
+}
+
+// =====================
+// ADD
+// =====================
+async function addAppointment() {
+
+  const data = {
+    patient_id: document.getElementById("patientSelect").value,
+    doctor_id: document.getElementById("doctorSelect").value,
+    date: document.getElementById("date").value,
+    time: document.getElementById("time").value,
+    status: document.getElementById("status").value
+  };
+
+  await fetch(`${API}/appointments`, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(data)
+  });
+
+  loadAppointments();
+}
+
+// =====================
+// EXPORT CSV
+// =====================
+function exportCSV() {
+  let csv = "patient,doctor,date,time,status\n";
+
+  appointmentsData.forEach(a => {
+    csv += `${a.patient_name},${a.doctor_name},${a.date},${a.time},${a.status}\n`;
+  });
+
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "appointments.csv";
+  a.click();
+}
+
+// =====================
+// IMPORT CSV
+// =====================
+function importCSV() {
+  const file = document.getElementById("csvFile").files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = async function(e) {
+    const rows = e.target.result.split("\n");
+
+    for (let i = 1; i < rows.length; i++) {
+      const cols = rows[i].split(",");
+      if (cols.length < 4) continue;
+
+      await fetch(`${API}/appointments`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          patient_id: 1,
+          doctor_id: 1,
+          date: cols[2],
+          time: cols[3],
+          status: cols[4] || "pending"
+        })
+      });
+    }
+
+    loadAppointments();
+  };
+
+  reader.readAsText(file);
+}
+
+// =====================
+// INIT
+// =====================
+function init() {
+  loadData();
+  loadAppointments();
+}
+
+init();
+
+</script>
+
+</body>
+</html>

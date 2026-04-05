@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Admissions Management</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+
+/* =======================
+GLOBAL
+======================= */
+body {
+  margin: 0;
+  font-family: Arial;
+  display: flex;
+}
+
+/* =======================
+SIDEBAR (محسّن)
+======================= */
+.sidebar {
+  width: 230px;
+  height: 100vh;
+  background: #2c3e50;
+  padding: 20px;
+  position: fixed;
+  overflow-y: auto;
+}
+
+.sidebar h2 {
+  color: white;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.sidebar a {
+  display: block;
+  color: #ddd;
+  padding: 12px;
+  margin: 8px 0;
+  text-decoration: none;
+  border-radius: 6px;
+  transition: 0.3s;
+}
+
+.sidebar a:hover {
+  background: #34495e;
+  transform: translateX(6px);
+}
+
+/* =======================
+MAIN
+======================= */
+.main {
+  margin-left: 250px;
+  padding: 20px;
+  flex: 1;
+  background: #ecf0f1;
+}
+
+/* =======================
+GRID
+======================= */
+.container {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 20px;
+}
+
+/* =======================
+CARDS
+======================= */
+.card {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.08);
+  margin-bottom: 20px;
+  transition: 0.3s;
+}
+
+.card:hover {
+  transform: scale(1.01);
+}
+
+/* =======================
+FORM
+======================= */
+input, select {
+  width: 100%;
+  padding: 10px;
+  margin: 8px 0 15px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+/* =======================
+BUTTON
+======================= */
+button {
+  width: 100%;
+  padding: 10px;
+  background: #e67e22;; /* 🔥 نفس لون lab tests */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+button:hover {
+  background: #e67e22;
+  transform: scale(1.05);
+}
+
+/* =======================
+TABLE
+======================= */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  background:white;
+  color: black;
+}
+
+th, td {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+  text-align: center;
+}
+
+tr:hover {
+  background: #f2f2f2;
+}
+
+/* =======================
+BADGES
+======================= */
+.badge {
+  padding: 5px 10px;
+  border-radius: 5px;
+  color: white;
+}
+
+.free { background: green; }
+.used { background: red; }
+
+/* =======================
+NOTIFICATIONS
+======================= */
+#notifications div {
+  background: #f39c12;
+  padding: 8px;
+  margin: 5px 0;
+  border-radius: 5px;
+}
+
+/* HEADER */
+.header-title {
+  margin-bottom: 20px;
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <h2>🏥 Admin</h2>
+  <a href="index.html">📊 Dashboard</a>
+  <a href="patients.html">👥 Patients</a>
+  <a href="Admissions.html">🛏️ Admissions</a>
+  <a href="appoinintments.html">📅 Appointments</a>
+  <a href="tests.html">🧪 Lab Tests</a>
+  <a href="invoices.html">💳 Invoices</a>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+<h1 class="header-title">🛏️ Admissions Management</h1>
+
+<div class="container">
+
+<!-- LEFT -->
+<div>
+
+<div class="card">
+    <h3>➕ Admit Patient</h3>
+
+    <select id="patientSelect"></select>
+    <select id="doctorSelect"></select>
+    <select id="roomSelect"></select>
+
+    <input type="date" id="entryDate">
+
+    <button onclick="addAdmission()">💾 Admit</button>
+</div>
+
+<div class="card">
+    <h3>📁 CSV Tools</h3>
+
+    <input type="file" id="csvFile">
+    <button onclick="importCSV()">📥 Import CSV</button>
+    <button onclick="exportCSV()">📤 Export CSV</button>
+</div>
+
+<div class="card">
+    <h3>🚨 Notifications</h3>
+    <div id="notifications"></div>
+</div>
+
+<div class="card">
+    <h3>📊 Rooms Status</h3>
+    <canvas id="roomChart"></canvas>
+</div>
+
+</div>
+
+<!-- RIGHT -->
+<div class="card">
+
+<h3>📋 Admissions</h3>
+
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Patient</th>
+<th>Doctor</th>
+<th>Room</th>
+<th>Entry</th>
+<th>Exit</th>
+<th>Status</th>
+<th>Action</th>
+</tr>
+</thead>
+
+<tbody id="admissionsTable"></tbody>
+
+</table>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+const API = "http://localhost:3000";
+let chart;
+
+// =====================
+// LOAD DATA
+// =====================
+async function loadPatients() {
+    const data = await fetch(`${API}/patients`).then(r => r.json());
+    patientSelect.innerHTML = "";
+    data.forEach(p => patientSelect.innerHTML += `<option value="${p.id}">${p.name}</option>`);
+}
+
+async function loadDoctors() {
+    const data = await fetch(`${API}/doctors`).then(r => r.json());
+    doctorSelect.innerHTML = "";
+    data.forEach(d => doctorSelect.innerHTML += `<option value="${d.id}">${d.name}</option>`);
+}
+
+async function loadRooms() {
+    const data = await fetch(`${API}/rooms`).then(r => r.json());
+    roomSelect.innerHTML = "";
+    data.forEach(r => {
+        if (r.status === "free") {
+            roomSelect.innerHTML += `<option value="${r.id}">Room ${r.number}</option>`;
+        }
+    });
+}
+
+// =====================
+// TABLE
+// =====================
+async function loadAdmissions() {
+    const data = await fetch(`${API}/admissions`).then(r => r.json());
+
+    admissionsTable.innerHTML = "";
+
+    data.forEach(a => {
+        let status = a.exit_date ? "free" : "used";
+
+        admissionsTable.innerHTML += `
+        <tr>
+            <td>${a.id}</td>
+            <td>${a.patient_name}</td>
+            <td>${a.doctor_name || "-"}</td>
+            <td>${a.room_number}</td>
+            <td>${a.entry_date}</td>
+            <td>${a.exit_date || "-"}</td>
+            <td><span class="badge ${status}">${status}</span></td>
+            <td>
+                ${!a.exit_date ? `<button onclick="discharge(${a.id})">Exit</button>` : ""}
+            </td>
+        </tr>`;
+    });
+}
+
+// =====================
+// ADD
+// =====================
+async function addAdmission() {
+    await fetch(`${API}/admissions`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            patient_id: patientSelect.value,
+            doctor_id: doctorSelect.value,
+            room_id: roomSelect.value,
+            entry_date: entryDate.value
+        })
+    });
+
+    notify("✅ Patient admitted");
+    refresh();
+}
+
+// =====================
+// EXIT
+// =====================
+async function discharge(id) {
+    await fetch(`${API}/admissions/${id}/exit`, { method: "PUT" });
+    notify("❌ Patient discharged");
+    refresh();
+}
+
+// =====================
+// NOTIFY
+// =====================
+function notify(msg) {
+    notifications.innerHTML += `<div>${msg}</div>`;
+}
+
+// =====================
+// CHART
+// =====================
+async function loadChart() {
+    const data = await fetch(`${API}/dashboard`).then(r => r.json());
+
+    if (chart) chart.destroy();
+
+    chart = new Chart(roomChart, {
+        type: "doughnut",
+        data: {
+            labels: ["Free", "Used"],
+            datasets: [{
+                data: [data.roomsFree, data.roomsUsed]
+            }]
+        }
+    });
+}
+
+// =====================
+// CSV EXPORT
+// =====================
+function exportCSV() {
+    window.open(`${API}/admissions/export/csv`);
+}
+
+// =====================
+// CSV IMPORT
+// =====================
+async function importCSV() {
+    const file = document.getElementById("csvFile").files[0];
+    if (!file) return alert("Select file");
+
+    const form = new FormData();
+    form.append("file", file);
+
+    await fetch(`${API}/admissions/import/csv`, {
+        method: "POST",
+        body: form
+    });
+
+    notify("📥 CSV Imported");
+    refresh();
+}
+
+// =====================
+// INIT
+// =====================
+function refresh() {
+    loadPatients();
+    loadDoctors();
+    loadRooms();
+    loadAdmissions();
+    loadChart();
+}
+
+refresh();
+setInterval(refresh, 10000);
+
+</script>
+
+</body>
+</html>

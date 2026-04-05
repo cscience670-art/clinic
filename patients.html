@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Patients Management</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial;
+  display: flex;
+}
+
+/* SIDEBAR */
+.sidebar {
+  width: 220px;
+  background: #2c3e50;
+  color: white;
+  height: 100vh;
+  padding: 20px;
+}
+
+.sidebar h2 {
+  text-align: center;
+}
+
+.sidebar a {
+  display: block;
+  padding: 10px;
+  color: white;
+  text-decoration: none;
+  margin: 5px 0;
+  border-radius: 5px;
+  transition: 0.3s;
+}
+
+.sidebar a:hover {
+  background: #34495e;
+}
+
+/* MAIN */
+.main {
+  flex: 1;
+  background: #ecf0f1;
+  padding: 20px;
+}
+
+/* HEADER */
+.header-title {
+  margin-bottom: 20px;
+}
+
+/* GRID */
+.container {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 20px;
+}
+
+/* CARD */
+.card {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+/* INPUT */
+input, select {
+  width: 100%;
+  padding: 10px;
+  margin: 5px 0;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+/* BUTTON */
+button {
+  padding: 10px;
+  background: #27ae60;
+  color: white;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 5px;
+  transition: 0.3s;
+}
+
+button:hover {
+  background: #1e8449;
+  transform: scale(1.03);
+}
+
+/* TABLE */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  background: #27ae60;
+  color: white;
+}
+
+th, td {
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+  text-align: center;
+}
+
+tr:hover {
+  background: #f2f2f2;
+}
+
+/* SEARCH */
+.search {
+  margin-bottom: 10px;
+}
+
+/* DELETE BUTTON */
+.delete-btn {
+  background: #e74c3c;
+}
+
+.delete-btn:hover {
+  background: #c0392b;
+}
+
+/* ACTIONS */
+.actions button {
+  width: 48%;
+  display: inline-block;
+}
+</style>
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <h2>🏥 Admin</h2>
+  <a href="index.html">📊 Dashboard</a>
+  <a href="patients.html">👥 Patients</a>
+  <a href="Admissions.html">🛏️ Admissions</a>
+  <a href="appoinintments.html">📅 Appointments</a>
+  <a href="tests.html">🧪 Lab Tests</a>
+  <a href="invoices.html">💳 Invoices</a>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+<h1 class="header-title">👥 Patients Management</h1>
+
+<div class="container">
+
+<!-- LEFT SIDE -->
+<div>
+
+<div class="card">
+  <h3>➕ Add Patient</h3>
+
+  <input type="text" id="name" placeholder="Name">
+  <input type="number" id="age" placeholder="Age">
+
+  <select id="gender">
+    <option value="">Gender</option>
+    <option value="male">Male</option>
+    <option value="female">Female</option>
+  </select>
+
+  <input type="text" id="phone" placeholder="Phone">
+
+  <button onclick="addPatient()">Add Patient</button>
+</div>
+
+<div class="card">
+  <h3>📂 CSV Tools</h3>
+
+  <input type="file" id="csvFile">
+  
+  <div class="actions">
+    <button onclick="importCSV()">📥 Import</button>
+    <button onclick="exportCSV()">📤 Export</button>
+  </div>
+</div>
+
+</div>
+
+<!-- RIGHT SIDE -->
+<div class="card">
+
+<h3>📋 Patients List</h3>
+
+<input class="search" type="text" id="search" placeholder="🔍 Search..." onkeyup="searchPatients()">
+
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Age</th>
+<th>Gender</th>
+<th>Phone</th>
+<th>Action</th>
+</tr>
+</thead>
+
+<tbody id="patientsTable"></tbody>
+</table>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+const API = "http://localhost:3000";
+let patientsData = [];
+
+// =====================
+// LOAD
+// =====================
+async function loadPatients() {
+  const res = await fetch(`${API}/patients`);
+  const data = await res.json();
+
+  patientsData = data;
+  renderTable(data);
+}
+
+// =====================
+// TABLE
+// =====================
+function renderTable(data) {
+  let table = document.getElementById("patientsTable");
+  table.innerHTML = "";
+
+  data.forEach(p => {
+    table.innerHTML += `
+      <tr>
+        <td>${p.name}</td>
+        <td>${p.age}</td>
+        <td>${p.gender}</td>
+        <td>${p.phone}</td>
+        <td>
+          <button class="delete-btn" onclick="deletePatient(${p.id})">
+            Delete
+          </button>
+        </td>
+      </tr>
+    `;
+  });
+}
+
+// =====================
+// SEARCH
+// =====================
+function searchPatients() {
+  let key = document.getElementById("search").value.toLowerCase();
+
+  let filtered = patientsData.filter(p =>
+    p.name.toLowerCase().includes(key)
+  );
+
+  renderTable(filtered);
+}
+
+// =====================
+// ADD
+// =====================
+async function addPatient() {
+
+  const name = document.getElementById("name").value;
+  const age = document.getElementById("age").value;
+  const gender = document.getElementById("gender").value;
+  const phone = document.getElementById("phone").value;
+
+  if (!name || !age || !gender) {
+    alert("⚠️ Fill all fields");
+    return;
+  }
+
+  await fetch(`${API}/patients`, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ name, age, gender, phone })
+  });
+
+  clearForm();
+  loadPatients();
+}
+
+// =====================
+// DELETE
+// =====================
+async function deletePatient(id) {
+  if (!confirm("Are you sure?")) return;
+
+  await fetch(`${API}/patients/${id}`, {
+    method: "DELETE"
+  });
+
+  loadPatients();
+}
+
+// =====================
+// EXPORT CSV
+// =====================
+function exportCSV() {
+  let csv = "name,age,gender,phone\n";
+
+  patientsData.forEach(p => {
+    csv += `${p.name},${p.age},${p.gender},${p.phone}\n`;
+  });
+
+  let blob = new Blob([csv], { type: "text/csv" });
+  let url = URL.createObjectURL(blob);
+
+  let a = document.createElement("a");
+  a.href = url;
+  a.download = "patients.csv";
+  a.click();
+}
+
+// =====================
+// IMPORT CSV
+// =====================
+function importCSV() {
+  let file = document.getElementById("csvFile").files[0];
+  if (!file) return;
+
+  let reader = new FileReader();
+
+  reader.onload = async function(e) {
+    let rows = e.target.result.split("\n");
+
+    for (let i = 1; i < rows.length; i++) {
+      let cols = rows[i].split(",");
+      if (cols.length < 4) continue;
+
+      const [name, age, gender, phone] = cols;
+
+      await fetch(`${API}/patients`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ name, age, gender, phone })
+      });
+    }
+
+    loadPatients();
+  };
+
+  reader.readAsText(file);
+}
+
+// =====================
+// CLEAR
+// =====================
+function clearForm() {
+  document.getElementById("name").value = "";
+  document.getElementById("age").value = "";
+  document.getElementById("gender").value = "";
+  document.getElementById("phone").value = "";
+}
+
+// =====================
+// INIT
+// =====================
+loadPatients();
+
+</script>
+
+</body>
+</html>

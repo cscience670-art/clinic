@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Lab Tests Management</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial;
+  display: flex;
+}
+
+/* SIDEBAR */
+.sidebar {
+  width: 220px;
+  background: #2c3e50;
+  color: white;
+  height: 100vh;
+  padding: 20px;
+}
+
+.sidebar h2 {
+  text-align: center;
+}
+
+.sidebar a {
+  display: block;
+  padding: 10px;
+  color: white;
+  text-decoration: none;
+  margin: 5px 0;
+  border-radius: 5px;
+  transition: 0.3s;
+}
+
+.sidebar a:hover {
+  background: #34495e;
+}
+
+/* MAIN */
+.main {
+  flex: 1;
+  background: #ecf0f1;
+  padding: 20px;
+}
+
+/* CARD */
+.card {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+}
+
+/* GRID */
+.container {
+  display: grid;
+  grid-template-columns: 350px 1fr;
+  gap: 20px;
+}
+
+/* FORM */
+input, select {
+  width: 100%;
+  padding: 10px;
+  margin: 5px 0;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+}
+
+button {
+  padding: 10px;
+  background: #8e44ad;
+  color: white;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  margin-top: 5px;
+}
+
+button:hover {
+  background: #6c3483;
+}
+
+/* TABLE */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+  text-align: center;
+}
+
+/* 🔥 Hover effect */
+tr:hover {
+  background: #f2f2f2;
+  transition: 0.3s;
+}
+
+/* HEADER */
+.header-title {
+  margin-bottom: 20px;
+}
+
+/* SEARCH */
+.search {
+  margin-bottom: 10px;
+}
+
+/* BUTTON GROUP */
+.actions button {
+  width: 48%;
+  display: inline-block;
+}
+</style>
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <h2>🏥 Admin</h2>
+  <a href="index.html">📊 Dashboard</a>
+  <a href="patients.html">👥 Patients</a>
+  <a href="Admissions.html">🛏️ Admissions</a>
+  <a href="appoinintments.html">📅 Appointments</a>
+  <a href="tests.html">🧪 Lab Tests</a>
+  <a href="invoices.html">💳 Invoices</a>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+<h1 class="header-title">🧪 Lab Tests Management</h1>
+
+<div class="container">
+
+<!-- LEFT -->
+<div>
+
+<div class="card">
+    <h3>➕ Add Test Result</h3>
+
+    <select id="patientSelect"></select>
+    <select id="testSelect"></select>
+
+    <input type="text" id="result" placeholder="Enter result">
+
+    <button onclick="addResult()">Save Result</button>
+</div>
+
+<div class="card">
+  <h3>📂 CSV Tools</h3>
+
+  <input type="file" id="csvFile">
+  <button onclick="importCSV()">📥 Import CSV</button>
+  <button onclick="exportCSV()">📤 Export CSV</button>
+</div>
+
+<div class="card">
+  <h3>📊 Chart</h3>
+  <canvas id="chart"></canvas>
+</div>
+
+</div>
+
+<!-- RIGHT -->
+<div class="card">
+
+<h3>📋 Test Results</h3>
+
+<input class="search" type="text" id="search" placeholder="🔍 Search..." onkeyup="searchResults()">
+
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Patient</th>
+<th>Test</th>
+<th>Result</th>
+<th>Date</th>
+</tr>
+</thead>
+
+<tbody id="resultsTable"></tbody>
+
+</table>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+const API = "http://localhost:3000";
+let resultsData = [];
+let chart;
+
+// =========================
+// LOAD DATA
+// =========================
+async function loadPatients() {
+    const res = await fetch(`${API}/patients`);
+    const data = await res.json();
+
+    let select = document.getElementById("patientSelect");
+    select.innerHTML = "";
+
+    data.forEach(p => {
+        select.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+    });
+}
+
+async function loadTests() {
+    const res = await fetch(`${API}/lab-tests`);
+    const data = await res.json();
+
+    let select = document.getElementById("testSelect");
+    select.innerHTML = "";
+
+    data.forEach(t => {
+        select.innerHTML += `<option value="${t.id}">${t.name}</option>`;
+    });
+}
+
+async function loadResults() {
+    const res = await fetch(`${API}/lab-tests/results`);
+    const data = await res.json();
+
+    resultsData = data;
+    renderTable(data);
+    loadChart(data);
+}
+
+// =========================
+// TABLE
+// =========================
+function renderTable(data) {
+    let table = document.getElementById("resultsTable");
+    table.innerHTML = "";
+
+    data.forEach(r => {
+        table.innerHTML += `
+        <tr>
+            <td>${r.id}</td>
+            <td>${r.patient_name}</td>
+            <td>${r.test_name}</td>
+            <td>${r.result}</td>
+            <td>${r.date}</td>
+        </tr>`;
+    });
+}
+
+// =========================
+// SEARCH
+// =========================
+function searchResults() {
+    let keyword = document.getElementById("search").value.toLowerCase();
+
+    let filtered = resultsData.filter(r =>
+        r.patient_name.toLowerCase().includes(keyword) ||
+        r.test_name.toLowerCase().includes(keyword)
+    );
+
+    renderTable(filtered);
+}
+
+// =========================
+// ADD
+// =========================
+async function addResult() {
+
+    const data = {
+        patient_id: document.getElementById("patientSelect").value,
+        test_id: document.getElementById("testSelect").value,
+        result: document.getElementById("result").value
+    };
+
+    await fetch(`${API}/lab-tests/results`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(data)
+    });
+
+    document.getElementById("result").value = "";
+    loadResults();
+}
+
+// =========================
+// CHART
+// =========================
+function loadChart(data) {
+
+    let count = {};
+
+    data.forEach(r => {
+        count[r.test_name] = (count[r.test_name] || 0) + 1;
+    });
+
+    let labels = Object.keys(count);
+    let values = Object.values(count);
+
+    if (chart) chart.destroy();
+
+    chart = new Chart(document.getElementById("chart"), {
+        type: "bar",
+        data: {
+            labels,
+            datasets: [{
+                label: "Tests Count",
+                data: values
+            }]
+        }
+    });
+}
+
+// =========================
+// EXPORT CSV
+// =========================
+function exportCSV() {
+    let csv = "patient,test,result,date\n";
+
+    resultsData.forEach(r => {
+        csv += `${r.patient_name},${r.test_name},${r.result},${r.date}\n`;
+    });
+
+    let blob = new Blob([csv], { type: "text/csv" });
+    let url = URL.createObjectURL(blob);
+
+    let a = document.createElement("a");
+    a.href = url;
+    a.download = "lab_results.csv";
+    a.click();
+}
+
+// =========================
+// IMPORT CSV
+// =========================
+function importCSV() {
+    let file = document.getElementById("csvFile").files[0];
+    if (!file) return;
+
+    let reader = new FileReader();
+
+    reader.onload = async function(e) {
+        let rows = e.target.result.split("\n");
+
+        for (let i = 1; i < rows.length; i++) {
+            let cols = rows[i].split(",");
+
+            if (cols.length < 3) continue;
+
+            // ⚠️ يحتاج تعديل حسب IDs
+            await fetch(`${API}/lab-tests/results`, {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({
+                    patient_id: 1,
+                    test_id: 1,
+                    result: cols[2]
+                })
+            });
+        }
+
+        loadResults();
+    };
+
+    reader.readAsText(file);
+}
+
+// =========================
+// INIT
+// =========================
+function init() {
+    loadPatients();
+    loadTests();
+    loadResults();
+}
+
+init();
+
+</script>
+
+</body>
+</html>
