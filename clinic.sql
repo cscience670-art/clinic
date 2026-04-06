@@ -1,6 +1,4 @@
--- =========================
--- 🧹 CLEAN START
--- =========================
+-- Execute  all  command in your PostgreSQL terminal (psql)
 CREATE DATABASE clinic 
 \c clinic
 
@@ -8,9 +6,7 @@ DROP TABLE IF EXISTS test_results, lab_tests, admissions, rooms,
 prescription_items, prescriptions, invoices, appointments,
 reception, doctors, patients, users CASCADE;
 
--- =========================
--- 👥 USERS
---1 =========================
+
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
@@ -20,9 +16,7 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- =========================
--- 🏥 PATIENTS
---2 =========================
+
 CREATE TABLE patients (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -32,9 +26,7 @@ CREATE TABLE patients (
     
 );
 
--- =========================
--- 👨‍⚕️ DOCTORS
---3 =========================
+
 CREATE TABLE doctors (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -42,9 +34,7 @@ CREATE TABLE doctors (
     phone VARCHAR(20) UNIQUE
 );
 
--- =========================
--- 📅 APPOINTMENTS
---4 =========================
+
 CREATE TABLE appointments (
     id SERIAL PRIMARY KEY,
     patient_id INT NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
@@ -55,9 +45,7 @@ CREATE TABLE appointments (
     CHECK (status IN ('confirmed', 'canceled', 'pending'))
 );
 
--- =========================
--- 📋 PRESCRIPTIONS
---5 =========================
+
 CREATE TABLE prescriptions (
     id SERIAL PRIMARY KEY,
     patient_id INT REFERENCES patients(id) ON DELETE CASCADE,
@@ -65,9 +53,7 @@ CREATE TABLE prescriptions (
     date DATE DEFAULT CURRENT_DATE
 );
 
--- =========================
--- 💊 PRESCRIPTION ITEMS
---6 =========================
+
 CREATE TABLE prescription_items (
     id SERIAL PRIMARY KEY,
     prescription_id INT REFERENCES prescriptions(id) ON DELETE CASCADE,
@@ -75,9 +61,7 @@ CREATE TABLE prescription_items (
     dosage VARCHAR(100)
 );
 
--- =========================
--- 💰 INVOICES
---7 =========================
+
 CREATE TABLE invoices (
     id SERIAL PRIMARY KEY,
     patient_id INT REFERENCES patients(id) ON DELETE CASCADE,
@@ -85,18 +69,13 @@ CREATE TABLE invoices (
     date DATE DEFAULT CURRENT_DATE
 );
 
--- =========================
--- 🛏️ ROOMS
---8 =========================
 CREATE TABLE rooms (
     id SERIAL PRIMARY KEY,
     number INT UNIQUE,
    type VARCHAR(50) CHECK (type IN ('normal', 'vip', 'emergency'))
 );
 
--- =========================
--- 🛌 ADMISSIONS
---9 =========================
+
 CREATE TABLE admissions (
     id SERIAL PRIMARY KEY,
     patient_id INT REFERENCES patients(id) ON DELETE CASCADE,
@@ -105,18 +84,14 @@ CREATE TABLE admissions (
     exit_date DATE
 );
 
--- =========================
--- 🧪 LAB TESTS
---10 =========================
+
 CREATE TABLE lab_tests (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL ,
     price DECIMAL(10,2)
 );
 
--- =========================
--- 📊 TEST RESULTS
---11 =========================
+
 CREATE TABLE test_results (
     id SERIAL PRIMARY KEY,
     patient_id INT NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
@@ -125,9 +100,7 @@ CREATE TABLE test_results (
     result TEXT
 );
 
--- =========================
--- 📞 RECEPTION
---12 =========================
+
 CREATE TABLE reception (
     id SERIAL PRIMARY KEY,
     patient_id INT REFERENCES patients(id) ON DELETE CASCADE,
